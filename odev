@@ -1,0 +1,142 @@
+import sys
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsView, QGraphicsScene, QLabel, QPushButton, QVBoxLayout, QWidget, QGroupBox, QGridLayout, QGraphicsPixmapItem
+from PyQt5.QtGui import QPixmap, QPen
+from PyQt5.QtCore import Qt, QPoint
+
+class DraggablePixmapItem(QGraphicsPixmapItem):
+    def __init__(self, pixmap):
+        super().__init__(pixmap)
+        self.setFlags(QGraphicsPixmapItem.ItemIsMovable | QGraphicsPixmapItem.ItemIsSelectable)
+
+class MantikDevreSimulatoru(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Mantık Devre Simülatörü")
+        self.setGeometry(100, 100, 1000, 800)
+
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
+
+        self.scene = QGraphicsScene()
+        self.view = QGraphicsView(self.scene, self)
+        layout.addWidget(self.view)
+
+        self.kapilari_ekle(layout)
+        self.giris_cikis_ekle(layout)
+        self.baglanti_elemanlari_ekle(layout)
+        self.kontrol_tuslarini_ekle(layout)
+
+        self.mevcut_baglanti = None
+        self.baglantilar = []
+
+    def kapilari_ekle(self, layout):
+        kapilar_groupbox = QGroupBox("Mantık Kapıları")
+        kapilar_layout = QGridLayout()
+
+        kapilar = ["notgate", "andgate", "orgate", "nandgate", "norgate", "xorgate", "xnorgate"]
+        positions = [(i, j) for i in range(3) for j in range(3)]
+
+        for position, kapi in zip(positions, kapilar):
+            button = QPushButton(kapi[:-4].capitalize())  # Son 4 karakteri (gate) çıkartarak buton adını oluştur
+            button.clicked.connect(lambda _, k=kapi: self.kapi_ekle(k))
+            kapilar_layout.addWidget(button, *position)
+
+        kapilar_groupbox.setLayout(kapilar_layout)
+        layout.addWidget(kapilar_groupbox)
+
+    def kapi_ekle(self, kapi_turu):
+        pixmap = QPixmap(f"{kapi_turu}.png")
+        item = DraggablePixmapItem(pixmap)
+        item.setPos(50, 50)  # Elemanın başlangıç konumunu ayarla
+        self.scene.addItem(item)
+
+    def giris_cikis_ekle(self, layout):
+        giris_cikis_groupbox = QGroupBox("Giriş/Çıkış Elemanları")
+        giris_cikis_layout = QVBoxLayout()
+
+        elemanlar = ["input", "output", "led"]
+
+        for eleman in elemanlar:
+            button = QPushButton(eleman.capitalize())
+            button.clicked.connect(lambda _, e=eleman: self.eleman_ekle(e))
+            giris_cikis_layout.addWidget(button)
+
+        giris_cikis_groupbox.setLayout(giris_cikis_layout)
+        layout.addWidget(giris_cikis_groupbox)
+
+    def baglanti_elemanlari_ekle(self, layout):
+        baglanti_groupbox = QGroupBox("Bağlantı Elemanları")
+        baglanti_layout = QVBoxLayout()
+
+        elemanlar = ["tel", "dugum"]
+
+        for eleman in elemanlar:
+            button = QPushButton(eleman.capitalize())
+            button.clicked.connect(lambda _, e=eleman: self.eleman_ekle(e))
+            baglanti_layout.addWidget(button)
+
+        baglanti_groupbox.setLayout(baglanti_layout)
+        layout.addWidget(baglanti_groupbox)
+
+    def mevcut_baglantiyi_ayarla(self, eleman_turu):
+        self.mevcut_baglanti = eleman_turu
+
+    def eleman_ekle(self, eleman_turu):
+        pixmap = QPixmap(f"{eleman_turu}.png")
+        item = DraggablePixmapItem(pixmap)
+        item.setPos(50, 50)  # Elemanın başlangıç konumunu ayarla
+        self.scene.addItem(item)
+
+    def tel_ciz(self, event):
+        if event.button() == Qt.LeftButton:
+            if self.mevcut_baglanti == "tel":
+                pos = event.scenePos()
+                self.baglantilar.append(pos)
+                if len(self.baglantilar) == 2:
+                    self.scene.addLine(self.baglantilar[0].x(), self.baglantilar[0].y(), self.baglantilar[1].x(), self.baglantilar[1].y(), QPen(Qt.black))
+                    self.baglantilar = []
+
+    def dugum_olustur(self, event):
+        if event.button() == Qt.LeftButton:
+            if self.mevcut_baglanti == "dugum":
+                pos = event.scenePos()
+                dugum = QLabel(self)
+                dugum.setGeometry(pos.x(), pos.y(), 10, 10)
+                dugum.setStyleSheet("background-color: red")
+                dugum.show()
+                self.scene.addWidget(dugum)
+
+    def kontrol_tuslarini_ekle(self, layout):
+        kontrol_groupbox = QGroupBox("Kontrol Tuşları")
+        kontrol_layout = QVBoxLayout()
+
+        start_button = QPushButton("Başlat")
+        start_button.clicked.connect(self.calistir)
+        kontrol_layout.addWidget(start_button)
+
+        stop_button = QPushButton("Durdur")
+        stop_button.clicked.connect(self.durdur)
+        kontrol_layout.addWidget(stop_button)
+
+        reset_button = QPushButton("Reset")
+        reset_button.clicked.connect(self.reset)
+        kontrol_layout.addWidget(reset_button)
+
+        kontrol_groupbox.setLayout(kontrol_layout)
+        layout.addWidget(kontrol_groupbox)
+
+    def calistir(self):
+        print("Devre çalıştırılıyor...")
+
+    def reset(self):
+        print("Devre sıfırlanıyor...")
+
+    def durdur(self):
+        print("Devre durduruluyor...")
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    pencere = MantikDevreSimulatoru()
+    pencere.show()
+    sys.exit(app.exec_())
